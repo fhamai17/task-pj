@@ -1,0 +1,49 @@
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg bg-light shadow">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">
+      <img src="/images/logo.png" alt="Logo" width="80" height="45" class="d-inline-block align-text-top">
+    </a>
+    <div class="d-flex" id="navbarNav">
+      <ul class="navbar-nav" id="ulNav">
+
+      </ul>
+    </div>
+</nav>
+
+<script>
+  $(document).ready(function () {
+    const isLoggin = Cookies.get('isLogin');
+    const token = Cookies.get('access_token');
+    const navbar = document.getElementById("ulNav");
+    if (isLoggin || token) {
+      navbar.innerHTML = `
+      <li class="nav-item">
+              <a class="nav-link" href="/profile">Profile</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#logout" id="btnLogout">Log out</a>
+            </li>
+                `;
+    } else {
+      navbar.innerHTML = `
+          <li class="nav-item">
+            <a class="nav-link" href="/">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/register">Register</a>
+          </li>
+                `;
+
+    }
+
+    $("#btnLogout").click(function(){
+      Cookies.remove('isLogin');
+      Cookies.remove('access_token');
+      window.location.href = "/";
+    }); 
+
+  });
+
+  
+</script>

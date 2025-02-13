@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <%- include('partials/link') %>
+</head>
+
+<body class="d-flex flex-column bg-body-secondary">
+  <!-- Main Content -->
+  <%- include('partials/navbar') %>
+
+    <!-- Main Content -->
+    <div class="main p-5">
+      <h1 class="text-center">Our tasks</h1>
+      <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" href="#addModal" role="button">
+          + Create a Task
+        </button>
+      </div>
+
+      <table class="table bg-light text-center" id="taskTable">
+        <thead class="thead-light">
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Task</th>
+            <th scope="col">Due Date</th>
+            <th scope="col">Status</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Assignee</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyTaskTable">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <%- include('partials/addModal') %>
+      <%- include('partials/editModal') %>
+        <!-- Footer -->
+        <%- include('partials/footer') %>
+
+          <!-- Bootstrap JS -->
+          <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+          <script src="https://cdn.datatables.net/2.2.1/js/dataTables.js"></script>
+          <script type="text/javascript" charset="utf8"
+            src="https://cdn.datatables.net/2.2.1/js/dataTables.bootstrap5.js" defer></script>
+
+          <script>
+            const status = {
+              1: { class: 'bg-dark', text: 'Pending' },
+              2: { class: 'bg-warning', text: 'In Progress' },
+              3: { class: 'bg-success', text: 'Done' },
+              default: { class: 'bg-danger', text: 'Unknown' }
+            };
+
+            const priority = {
+              1: { class: 'bg-dark', text: 'Low' },
+              2: { class: 'bg-primary', text: 'Normal' },
+              3: { class: 'bg-danger', text: 'High' },
+              default: { class: 'bg-dark', text: 'Unknown' }
+            };
+
+            $(document).ready(function () {
+              getTasks();
+              getUsers();
+
+              $(".date").datepicker({
+                format: "dd/mm/yyyy",
+              });
+
+              $('#taskTable').on('click', '.delete', function () {
+                // var button = $(event.relatedTarget);
+                var _id = $(this).data("id")
+                Swal.fire({
+                  title: "Are you sure to update task?",
+                  text: "You won't be able to revert this!",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#d33",
+                  confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    deleteTask(_id);
+                  }
+                });
+              });
+
+              $(".date").datepicker().on('show.bs.modal', function (event) {
+                // prevent datepicker from firing bootstrap modal "show.bs.modal"
+                event.stopPropagation();
+              });
+
+              $('#editModal').on('show.bs.modal', async function (e) {
+                var button = $(e.relatedTarget);
+                var _id = button.data('id');
+
+                try {
+                  const res = await axios.get("/api/task/" + _id);
+                  const data = res.data;
+                  console.log(data);
+                  if (data.success) {
+                    const task = data.data;
+                    let taskDate = new Date(task.due_date);
+                    let formatDate =
+                      ('0' + taskDate.getUTCDate()).slice(-2) + '/' +
+                      ('0' + (taskDate.getUTCMonth() + 1)).slice(-2) + '/' +
+                      taskDate.getUTCFullYear();
+
+                    $('#editId').val(task._id);
+                    $('#editTitle').val(task.title);
+                    $('#editDesc').val(task.description);
+                    $('#editDate').datepicker("setDate", formatDate)
+                    $('#editStatus').val(task.status);
+                    $('#editPriority').val(task.priority);
+                    $('#editAssignee').val(task.user_id);
+                    $('#detail').html(
+                      `<p><small>Created by : ${task.creator ? task.creator.name : 'Unknown'} | ${task.created_at ? formatDatetime(task.created_at) : 'Unknown'} </small><br>
+                      <small>Edited by : ${task.editor ? task.editor.name : 'Unknown'} | ${task.updated_at ? formatDatetime(task.updated_at) : 'Unknown'} </small>
+                      </p>`
+                    );
+                  }
+
+                } catch (error) {
+                  let title = 'Error!';
+                  let message = error.message;
+
+                  if (error.status == 422) {
+                    title = error.response.data.message;
+                    let errors = error.response.data.errors;
+                    let html = '';
+                    errors.forEach(item => {
+                      html += `${item.msg}<br>`
+                    });
+                    message = html;
+                  }
+
+                  Swal.fire({
+                    title: title,
+                    html: message,
+                    icon: "error"
+                  });
+                }
+              });
+
+              $("#addForm").submit(async function (e) {
+                e.preventDefault();
+                Swal.fire({
+                  title: "Are you sure to create task?",
+                  text: "You won't be able to revert this!",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#d33",
+                  confirmButtonText: "Yes, create it!"
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    createTask();
+                  }
+                });
+              });
+
+              $("#editForm").submit(async function (e) {
+                e.preventDefault();
+                Swal.fire({
+                  title: "Are you sure to update task?",
+                  text: "You won't be able to revert this!",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#d33",
+                  confirmButtonText: "Yes, update it!"
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    updateTask();
+                  }
+                });
+              });
+
+            });
+
+            async function createTask() {
+              try {
+                let title = $('#addTitle').val();
+                let description = $('#addDesc').val();
+                let due_date = $('#addDate').val();
+                let status = '1'; // 1 is pending
+                let priority = $('#addPriority').val();
+                let assignee = $('#addAssignee').val();
+
+                const jsonData = { title, description, due_date, status, priority, user_id: assignee };
+                const res = await axios.post('/api/task', jsonData);
+
+                const data = await res.data;
+                console.log(data);
+
+                if (data.success) {
+                  $('#addModal').modal('hide');
+                  Swal.fire({
+                    title: "Success!",
+                    text: data.message,
+                    icon: "success",
+                    heightAuto: false
+                  }).then((result) => {
+                    // Reload the Page
+                    location.reload();
+                  });
+                } else {
+                  Swal.fire({
+                    title: "Error!",
+                    text: data.message,
+                    icon: "error"
+                  });
+                }
+              } catch (error) {
+                let title = 'Error!';
+                let message = error.message;
+
+                if (error.status == 422) {
+                  title = error.response.data.message;
+                  let errors = error.response.data.errors;
+                  let html = '';
+                  errors.forEach(item => {
+                    html += `${item.msg}<br>`
+                  });
+                  message = html;
+                }
+
+                Swal.fire({
+                  title: title,
+                  html: message,
+                  icon: "error"
+                });
+              }
+            }
+
+            async function updateTask() {
+              try {
+                let _id = $('#editId').val();
+                let title = $('#editTitle').val();
+                let description = $('#editDesc').val();
+                let due_date = $('#editDate').val();
+                let status = $('#editStatus').val();
+                let priority = $('#editPriority').val();
+                let assignee = $('#editAssignee').val();
+
+                const jsonData = { title, description, due_date, status, priority, user_id: assignee };
+                console.log(jsonData);
+                const res = await axios.put('/api/task/' + _id, jsonData);
+                const data = await res.data;
+
+                console.log(data);
+                if (data.success) {
+
+                  $('#editModal').modal('hide');
+                  Swal.fire({
+                    title: "Success!",
+                    text: data.message,
+                    icon: "success",
+                    heightAuto: false
+                  }).then((result) => {
+                    // Reload the Page
+                    location.reload();
+                  });
+
+                } else {
+                  Swal.fire({
+                    title: "Error!",
+                    text: data.message,
+                    icon: "error"
+                  });
+                }
+              } catch (error) {
+                Swal.fire({
+                  title: "Error!",
+                  text: error.message,
+                  icon: "error"
+                });
+              }
+            }
+
+            async function deleteTask(_id) {
+              try {
+                const res = await axios.delete("/api/task/" + _id);
+                const data = await res.data;
+                console.log(data);
+                if (data.success) {
+                  Swal.fire({
+                    title: "Success!",
+                    text: data.message,
+                    icon: "success",
+                  }).then((result) => {
+                    // Reload the Page
+                    location.reload();
+                  });
+
+                } else {
+                  Swal.fire({
+                    title: "Error!",
+                    text: data.message,
+                    icon: "error"
+                  });
+                }
+
+              } catch (error) {
+                // console.log(error);
+                Swal.fire({
+                  title: "Error!",
+                  text: error.message,
+                  icon: "error"
+                });
+              }
+            }
+
+            async function getTasks() {
+              try {
+                const res = await axios.get("/api/tasks");
+                const data = await res.data;
+
+                if (data.success) {
+                  const arr = data.data;
+                  $('#taskTable').DataTable({
+                    data: arr,
+                    columns: [
+                      {
+                        data: null,
+                        render: function (data, type, row, meta) {
+                          return meta.row + 1;
+                        }
+                      },
+                      { data: 'title' },
+                      {
+                        data: 'due_date', render: function (data, type, row, meta) {
+                          return formatDate(data);
+                        }
+                      },
+                      {
+                        data: 'status', render: function (data, type, row, meta) {
+                          const statusClass = status[data]['class'];
+                          const statusText = status[data]['text'];
+                          return `<span class="badge ${statusClass}">${statusText}</span>`;
+                        }
+                      },
+                      {
+                        data: 'priority', render: function (data, type, row, meta) {
+                          const statusClass = priority[data]['class'];
+                          const statusText = priority[data]['text'];
+                          return `<span class="badge ${statusClass}">${statusText}</span>`;
+                        }
+                      },
+                      { data: 'user.name' },
+                      {
+                        data: '_id', render: function (data, type, row, meta) {
+                          return `<button type="button" class="btn btn-outline-warning edit" data-bs-toggle="modal" href="#editModal" data-id="${data}">Edit</button>
+                          <button type="button" class="btn btn-outline-danger delete" data-id="${data}">Delete</button>`;
+                        }
+                      },
+                    ],
+                    columnDefs: [
+                      { targets: '_all', className: 'dt-center' }
+                    ],
+                  });
+                }
+
+              } catch (error) {
+                console.log(error);
+              }
+
+            };
+
+            async function getUsers() {
+              try {
+                const res = await axios.get("/api/users");
+                const data = await res.data;
+                let html = '<option value="" selected disabled>Please select</option>';
+                const addSelect = document.getElementById("addAssignee");
+                const editSelect = document.getElementById("editAssignee");
+                if (data.success) {
+                  const users = data.data;
+                  if (users.length > 0) {
+                    users.forEach(user => {
+                      html += `<option value="${user._id}">${user.name}</option>`
+                    });
+                  }
+                }
+
+                console.log(html);
+                addSelect.innerHTML = html;
+                editSelect.innerHTML = html;
+
+              } catch (error) {
+                console.log(error);
+              }
+
+            };
+
+            function formatDate(date) {
+              return moment.tz(date, "Asia/Bangkok").format('DD/MM/YYYY')
+            }
+
+            function formatDatetime(date) {
+              return moment.tz(date, "Asia/Bangkok").format('DD/MM/YYYY HH:mm:ss')
+            }
+          </script>
+</body>
+
+</html>

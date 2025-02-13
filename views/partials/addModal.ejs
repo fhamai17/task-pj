@@ -1,0 +1,55 @@
+<div class="modal fade" id="addModal" aria-hidden="true" aria-labelledby="addModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addModalToggleLabel">Create a Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <!-- Form -->
+      <form id="addForm" name="addForm" autocomplete="off">
+        <div class="modal-body">
+          <div>
+            <input type="hidden" class="form-control" id="addId" />
+            <div class="mb-3">
+              <label for="title" class="form-label">Title</label>
+              <input type="text" class="form-control" id="addTitle" placeholder="Enter a title" required/>
+            </div>
+            <div class="mb-3">
+              <label for="description" class="form-label">Description</label>
+              <textarea class="form-control" id="addDesc" placeholder="Enter a description" required></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label for="due_date" class="form-label">Due date</label>
+              <div class="input-group">
+                <input type="text" class="date form-control" required placeholder="DD/MM/YYYY" aria-label="Date" id="addDate"
+                onkeypress="return false;">
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="priority" class="form-label">Priority</label>
+              <select class="form-select" aria-label="Priority" id="addPriority" required>
+                <option value="" disabled selected>Please select</option>
+                <option value="1">Low</option>
+                <option value="2">Normal</option>
+                <option value="3">High</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="assignee" class="form-label">Assignee</label>
+              <select class="form-select" aria-label="Assignee" id="addAssignee" required>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn w-100 btn-primary">
+            CREATE
+          </button>
+        </div>
+    </div>
+    </form>
+  </div>
+</div>
