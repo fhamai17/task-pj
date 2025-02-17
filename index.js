@@ -13,7 +13,6 @@ const authRoutes = require('./routes/authRoutes')
 const taskRoutes = require('./routes/taskRoutes')
 const userRoutes = require('./routes/userRoutes')
 const cookieParser = require('cookie-parser');
-const moment = require('moment');
 
 // Use cookie-parser middleware
 app.use(cookieParser());
